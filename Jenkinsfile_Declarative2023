@@ -1,0 +1,47 @@
+pipeline{
+  agent any 
+  tools {
+    maven "maven3"
+  }  
+  stages {
+    stage('1GetCode'){
+      steps{
+        sh "echo 'cloning the latest application version' "
+        git 'https://github.com/MfonCharis/maven-web-application'
+      }
+    }
+    stage('3Test+Build'){
+      steps{
+        sh "echo 'running JUnit-test-cases' "
+        sh "echo 'testing must passed to create artifacts ' "
+        sh "mvn clean package"
+      }
+    }
+    stage('4CodeQuality'){
+      steps{
+        sh "echo 'Perfoming CodeQualityAnalysis' "
+        sh "mvn sonar:sonar"
+      }
+    } 
+    stage('5uploadNexus'){
+      steps{
+        sh "mvn deploy"
+      }
+    }  
+    stage('6deploy2prod'){
+      steps{
+        deploy adapters: [tomcat9(credentialsId: '37aec0bd-7b6d-4e02-ab6b-04bad1937588', path: '', url: 'http://35.183.120.98:8080/')], contextPath: null, war: 'target/*war'   }
+        }
+  }
+    post{
+    //always{}
+    success{
+      emailext body: 'Great', recipientProviders: [contributor(), developers()], subject: 'Success', to: 'mfonuko12@gmail.com'
+    } 
+    failure{
+      emailext body: '''Hey Guys,
+Let's check the build again.
+The build has failed.
+Mfon''', recipientProviders: [buildUser(), developers(), requestor()], subject: 'Success', to: 'mfonuko12@gmail.com'
+    } 
+ }}
